@@ -76,6 +76,14 @@ describe('history', () => {
     expect(h.present.layers.skin.cuts).toHaveLength(0);
     expect(JSON.stringify(D.undo(h).present)).toBe(before);
   });
+  it('forceps permission probe works on an incised flap at rest and on a reflected flap', () => {
+    let h = D.newHistory();
+    for (const c of D.LAYER_RULES.skin.requiredCuts) h = D.commit(h, D.incise(h.present, 'skin', c, 'scalpel'));
+    expect(D.setFlap(h.present, 'skin', 'medial', 0.01, 'forceps').ok).toBe(true);
+    expect(D.setFlap(h.present, 'skin', 'medial', 0, 'forceps').ok).toBe(false); // no-op refused
+    h = D.commit(h, D.reflectLayer(h.present, 'skin', 'reflect'));
+    expect(D.setFlap(h.present, 'skin', 'medial', 0.99, 'forceps').ok).toBe(true);
+  });
   it('redundant reflect is refused and creates no history entry', () => {
     let h = D.newHistory();
     for (const c of D.LAYER_RULES.skin.requiredCuts) h = D.commit(h, D.incise(h.present, 'skin', c, 'scalpel'));

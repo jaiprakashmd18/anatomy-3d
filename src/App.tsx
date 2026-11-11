@@ -61,9 +61,12 @@ export function App() {
         {model && <Toolbar />}
         {s.toast && <div key={s.toast.nonce} className={`toast ${s.toast.ok ? '' : 'err'}`} role="status">{s.toast.text}</div>}
         {hover && s.tool !== 'scalpel' && <div className="tip" style={{ left: mouse.x + 14, top: mouse.y + 14 }}>{hover}</div>}
-        <div className="hint">Left-drag: rotate (or cut/lift with an instrument) · right-drag / two fingers: move camera · wheel: zoom</div>
+        <div className="hint hint-desktop">Left-drag: rotate (or cut/lift with an instrument) · right-drag: pan · wheel: zoom</div>
+        <div className="touch-hint hint-touch">1 finger: rotate / use instrument · 2 fingers: zoom &amp; pan</div>
+        {s.selected && STRUCTURE_BY_ID[s.selected] && <div className="sel-chip"><b>{STRUCTURE_BY_ID[s.selected].name}</b><button onClick={() => { s.patch({ rightTab: 'info' }); setR(true); setL(false); }}>Details</button></div>}
         <div className="attr">BodyParts3D © DBCLS, CC BY-SA 2.1 JP · Educational use · unreviewed content</div>
       </main>
+      <div className="backdrop" onClick={() => { setL(false); setR(false); }} />
       <RightPanel />
       {model && <Modals meta={model.meta} />}
       {(s.modal === 'auth' || s.modal === 'account') && <AuthModal />}

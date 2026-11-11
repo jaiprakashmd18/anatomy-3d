@@ -161,7 +161,7 @@ function Interaction({ model }: { model: LimbModel }) {
         const hit = pick(e, (m) => m.userData.kind === 'sheet' && (m.userData.group === 'medial' || m.userData.group === 'lateral'));
         if (!hit) return;
         const layer = hit.object.userData.layer as LayerId, side = hit.object.userData.group as FlapSide;
-        const probe = D.setFlap(d, layer, side, d.layers[layer].flap[side], 'forceps');
+        const cur = d.layers[layer].flap[side]; const probe = D.setFlap(d, layer, side, cur > 0.5 ? cur - 0.01 : cur + 0.01, 'forceps'); // permission/prerequisite probe (setFlap refuses no-ops)
         if (!probe.ok) { st.say(probe.message, false); return; }
         const f = model.flaps[layer][side]!; const lp = model.root.worldToLocal(hit.point.clone());
         let bi = 0, bd = Infinity; for (let i = 0; i < f.orig.length; i += 3) { const dd = (f.orig[i] - lp.x) ** 2 + (f.orig[i + 1] - lp.y) ** 2 + (f.orig[i + 2] - lp.z) ** 2; if (dd < bd) { bd = dd; bi = i; } }
