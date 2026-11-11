@@ -287,9 +287,9 @@ function FpsProbe() {
 
 export function Scene({ model }: { model: LimbModel }) {
   const quality = useStore((s) => s.quality); const theme = useStore((s) => s.theme); const orientation = useStore((s) => s.orientation);
-  const dpr = quality === 'low' ? 1 : quality === 'medium' ? Math.min(1.5, window.devicePixelRatio) : Math.min(2, window.devicePixelRatio);
+  const dpr = quality === 'low' ? 1 : quality === 'medium' ? Math.min(1.5, window.devicePixelRatio) : quality === 'high' ? Math.min(2, window.devicePixelRatio) : Math.min(3, Math.max(2, window.devicePixelRatio));
   return (
-    <Canvas dpr={dpr} camera={{ position: [0, 0, 120], fov: 35, near: 1, far: 600 }} gl={{ antialias: quality !== 'low', preserveDrawingBuffer: true, powerPreference: 'high-performance' }} style={{ touchAction: 'none' }}>
+    <Canvas dpr={dpr} camera={{ position: [0, 0, 120], fov: 35, near: 1, far: 600 }} gl={{ antialias: quality !== 'low', stencil: false, preserveDrawingBuffer: true, powerPreference: 'high-performance' }} style={{ touchAction: 'none' }}>
       <color attach="background" args={[theme === 'dark' ? '#10141b' : '#dfe4ec']} />
       <fog attach="fog" args={[theme === 'dark' ? '#10141b' : '#dfe4ec', 160, 420]} />
       <Lights />

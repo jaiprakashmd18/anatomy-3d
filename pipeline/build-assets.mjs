@@ -22,7 +22,7 @@ const parts = []; // {sid, fma, layer, mesh, nor, srcTris}
 for (const [sid, name, fmas, layer, budget] of MESH_STRUCTURES) {
   for (const fma of fmas) {
     const raw = readSTL(path.join(SRC, `FMA${fma}.stl`));
-    const mesh = decimateTo(raw, Math.round((budget * 1.8) / fmas.length));
+    const mesh = decimateTo(raw, Math.round((budget * Number(process.env.DETAIL ?? 4)) / fmas.length));
     parts.push({ sid, fma, layer, mesh, nor: normals(mesh), srcTris: raw.idx.length / 3 });
   }
 }
@@ -81,7 +81,7 @@ const skinPts = []; for (let i = 0; i < keepTris.length; i += 3) skinPts.push([k
 
 // ---------- 4. radial grids ----------
 const uSkinMax = frame.segs[2].u0 + 28; // skin is resampled up to just beyond the wrist; the hand is left unskinned
-const Rskin = radialGrid(frame, uLo, uSkinMax, 2.5, 144, skinPts, 'p90', 7);
+const Rskin = radialGrid(frame, uLo, uSkinMax, 2.0, 216, skinPts, 'p90', 9);
 const SUPF_DEPTH = 4.0, DEEP_OFF = 0.8;
 const Rsupf = (u, t) => Rskin.at(u, t) - SUPF_DEPTH;
 const Rdeep = (u, t) => Math.min(Rhull.at(u, t) + DEEP_OFF, Rsupf(u, t) - 0.5);
@@ -100,8 +100,8 @@ function subMesh(mesh, nor, tris) {
 }
 /** Cylindrical sheet resampled on a (u, theta) grid. Rows are aligned so uTop/uBot and theta = 0, +-hinge lie on grid lines;
  *  triangle groups: 0 fixed, 1 medial flap, 2 lateral flap (decided per quad, so flap borders are exact). */
-function buildSheet(radiusFn, uMin, uMax, nT = 144) {
-  const N = Math.round((uBot - uTop) / 3.5); const du = (uBot - uTop) / N;
+function buildSheet(radiusFn, uMin, uMax, nT = 216) {
+  const N = Math.round((uBot - uTop) / 2.3); const du = (uBot - uTop) / N;
   const i0 = -Math.floor((uTop - uMin) / du), i1 = N + Math.floor((uMax - uBot) / du);
   const rows = i1 - i0 + 1; const pos = [];
   for (let r = 0; r < rows; r++) for (let j = 0; j < nT; j++) {

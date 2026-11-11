@@ -16,7 +16,7 @@ npm test             # 33 unit/integration tests (engine, content↔asset integr
 npm run build        # type-check + production build into dist/
 ```
 
-The processed assets (`public/assets/limb.glb` 8 MB, `limb-meta.json`) are committed, so no Blender or downloads are needed to run the app.
+The processed assets (`public/assets/limb.glb` ~17 MB, `limb-meta.json`) are committed, so no Blender or downloads are needed to run the app.
 
 ### Rebuild the assets from source (optional)
 ```bash

@@ -23,7 +23,7 @@ export function TopBar({ onToggleLeft, onToggleRight }: { onToggleLeft(): void; 
       </div>
       <div className="spacer" />
       {s.showFps && <span className={`fps ${s.fps < 30 ? 'bad' : ''}`}>{s.fps} fps</span>}
-      <select className="chip" value={s.quality} onChange={(e) => s.patch({ quality: e.target.value as never })} aria-label="Graphics quality"><option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option></select>
+      <select className="chip" value={s.quality} onChange={(e) => s.patch({ quality: e.target.value as never })} aria-label="Graphics quality"><option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option><option value="ultra">Ultra (4K)</option></select>
       <button className="chip" onClick={() => s.patch({ showFps: !s.showFps })} aria-pressed={s.showFps}>FPS</button>
       <button className="chip" onClick={() => s.patch({ modal: 'sessions' })}>Save / Resume</button>
       <button className="chip" onClick={() => s.patch({ modal: 'coverage' })}>Coverage</button>

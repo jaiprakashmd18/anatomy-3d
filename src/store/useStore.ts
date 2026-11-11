@@ -7,7 +7,7 @@ import { LESSON } from '../data/lesson';
 export type Mode = 'cadaver' | 'atlas' | 'xray';
 export type VisKey = 'skin' | 'fascia' | 'muscle' | 'bone' | 'nerve' | 'artery' | 'vein';
 export type CameraPreset = 'anterior' | 'posterior' | 'medial' | 'lateral' | 'shoulder' | 'arm' | 'elbow' | 'forearm' | 'hand';
-export type Quality = 'low' | 'medium' | 'high';
+export type Quality = 'low' | 'medium' | 'high' | 'ultra';
 export const VIS_KEYS: VisKey[] = ['skin', 'fascia', 'muscle', 'bone', 'nerve', 'artery', 'vein'];
 
 export interface SavedSession { id: string; name: string; savedAt: string; history: D.History }
