@@ -31,7 +31,6 @@ export function TopBar({ onToggleLeft, onToggleRight }: { onToggleLeft(): void; 
 
       <div className="group wide-only" role="group" aria-label="View"><span className="lbl">View</span>{VIEWS.map((v) => <button key={v} className="chip" onClick={() => s.requestCamera(v)}>{cap(v)}</button>)}</div>
       <div className="group wide-only" role="group" aria-label="Visual mode">{MODES.map(([m, l]) => <button key={m} className={`chip ${s.mode === m ? 'on' : ''}`} onClick={() => s.setMode(m)} aria-pressed={s.mode === m}>{l}</button>)}</div>
-      <div className="group wide-only"><Extras /></div>
 
       <div className="spacer" />
       {s.showFps && <span className={`fps ${s.fps < 30 ? 'bad' : ''}`}>{s.fps} fps</span>}
@@ -40,7 +39,7 @@ export function TopBar({ onToggleLeft, onToggleRight }: { onToggleLeft(): void; 
       <select className="chip narrow-only" aria-label="Visual mode" value={s.mode} onChange={(e) => s.setMode(e.target.value as Mode)}>{MODES.map(([m, , short]) => <option key={m} value={m}>{short}</option>)}</select>
 
       <button className={`chip ${s.user ? 'on' : ''}`} onClick={() => s.patch({ modal: s.user ? 'account' : 'auth' })} aria-label="Account">{s.user ? `${s.plan === 'pro' ? '★ ' : ''}${s.user.email.split('@')[0]}` : 'Sign in'}</button>
-      <div className="pop-wrap narrow-only">
+      <div className="pop-wrap">
         <button className="icon-btn" onClick={() => setMenu(!menu)} aria-label="More options" aria-expanded={menu}>⋯</button>
         {menu && <><div className="menu-bg" onClick={() => setMenu(false)} /><div className="menu" role="menu" onClick={() => setMenu(false)}><Extras /></div></>}
       </div>
