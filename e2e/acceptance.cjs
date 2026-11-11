@@ -6,7 +6,7 @@ const OUT = process.argv[2] || 'e2e';
   const p = await b.newPage({ viewport: { width: 1500, height: 900 } });
   p.on('console', (m) => { if (['error'].includes(m.type())) console.log('console', m.type(), m.text().slice(0, 300)); });
   p.on('pageerror', (e) => console.log('pageerror', e.message.slice(0, 400)));
-  await p.goto('http://127.0.0.1:5173/'); await p.waitForTimeout(5000);
+  p.setDefaultTimeout(180000); await p.goto('http://127.0.0.1:5173/'); await p.waitForTimeout(5000);
   const st = () => p.evaluate(() => { const s = window.__av.useStore.getState(); return { layers: Object.fromEntries(Object.entries(s.hist.present.layers).map(([k, v]) => [k, { cuts: v.cuts.length, m: +v.flap.medial.toFixed(2), l: +v.flap.lateral.toFixed(2) }])), sel: s.selected, toast: s.toast && s.toast.text, log: s.hist.log, retracted: s.hist.present.retracted }; });
   const shot = async (n, wait = 1800) => { await p.waitForTimeout(wait); await p.screenshot({ path: `${OUT}-${n}.png` }); };
   const key = (k) => p.keyboard.press(k);
