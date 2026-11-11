@@ -95,3 +95,7 @@ ul.cov { list-style:none; padding:0; } ul.cov li { padding:7px 0; border-bottom:
 /* ultra-wide / large monitors: keep the stage from stretching the toolbar awkwardly */
 @media (min-width:2000px) { .toolbar { transform:scale(1.15); transform-origin:bottom center; } }
 @media (prefers-reduced-motion:reduce) { * { transition:none !important; animation:none !important; } }
+
+.acc-icon { display:none; }
+@media (max-width:1500px) { .tool { min-width:46px; padding:5px 4px 3px; } .tool span { font-size:10.5px; } .toolbar { gap:2px; } }
+@media (max-width:640px) { .acc-label { display:none; } .acc-icon { display:inline; } .topbar { flex-wrap:nowrap; } .brand b { display:none; } .touch-hint { text-shadow:0 1px 3px #000; bottom:76px; } }

@@ -60,7 +60,7 @@ export const MESH_STRUCTURES = [
 ];
 
 /** Structures that define the limb "tissue" used for hulls / skin cropping (excludes trunk context muscles). */
-export const LIMB_TISSUE = MESH_STRUCTURES.filter(([id]) => !['pectoralis_major', 'pectoralis_minor', 'clavicle', 'scapula', 'subscapularis', 'supraspinatus', 'infraspinatus', 'teres_minor'].includes(id)).map(([id]) => id);
+export const LIMB_TISSUE = MESH_STRUCTURES.filter(([id]) => !['pectoralis_major', 'pectoralis_minor', 'clavicle', 'scapula', 'subscapularis', 'supraspinatus', 'infraspinatus', 'teres_minor', 'teres_major'].includes(id)).map(([id]) => id);
 export const HULL_MUSCLES = MESH_STRUCTURES.filter(([id, , , layer]) => layer === 'muscle' && LIMB_TISSUE.includes(id)).map(([id]) => id);
 
 export const SKIN_FMA = 7163;

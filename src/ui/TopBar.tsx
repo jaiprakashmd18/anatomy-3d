@@ -38,7 +38,7 @@ export function TopBar({ onToggleLeft, onToggleRight }: { onToggleLeft(): void; 
       <select className="chip narrow-only" aria-label="View" value="" onChange={(e) => e.target.value && s.requestCamera(e.target.value as CameraPreset)}><option value="">View…</option>{VIEWS.map((v) => <option key={v} value={v}>{cap(v)}</option>)}</select>
       <select className="chip narrow-only" aria-label="Visual mode" value={s.mode} onChange={(e) => s.setMode(e.target.value as Mode)}>{MODES.map(([m, , short]) => <option key={m} value={m}>{short}</option>)}</select>
 
-      <button className={`chip ${s.user ? 'on' : ''}`} onClick={() => s.patch({ modal: s.user ? 'account' : 'auth' })} aria-label="Account">{s.user ? `${s.plan === 'pro' ? '★ ' : ''}${s.user.email.split('@')[0]}` : 'Sign in'}</button>
+      <button className={`chip ${s.user ? 'on' : ''}`} onClick={() => s.patch({ modal: s.user ? 'account' : 'auth' })} aria-label="Account"><span className="acc-icon" aria-hidden>👤</span><span className="acc-label">{s.user ? `${s.plan === 'pro' ? '★ ' : ''}${s.user.email.split('@')[0]}` : 'Sign in'}</span></button>
       <div className="pop-wrap">
         <button className="icon-btn" onClick={() => setMenu(!menu)} aria-label="More options" aria-expanded={menu}>⋯</button>
         {menu && <><div className="menu-bg" onClick={() => setMenu(false)} /><div className="menu" role="menu" onClick={() => setMenu(false)}><Extras /></div></>}
