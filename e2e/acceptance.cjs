@@ -18,7 +18,7 @@ const OUT = process.argv[2] || 'e2e';
     await key(tool);
     const px = await p.evaluate(([layer, cutId]) => window.__av.guideScreen(layer, cutId), [layer, cutId]);
     if (!px) { console.log('no guide for', cutId); return; }
-    const trim = cutId.includes('skin.p') || cutId.includes('skin.d') ? 9 : layer !== 'skin' ? 3 : 0; const pts = px.slice(trim, px.length - trim);
+    const trim = cutId.includes('skin.p') || cutId.includes('skin.d') ? 16 : layer !== 'skin' ? 3 : 0; const pts = px.slice(trim, px.length - trim);
     await p.mouse.move(pts[0][0], pts[0][1]); await p.mouse.down();
     for (const q of pts) await p.mouse.move(q[0], q[1], { steps: 2 });
     await p.mouse.up(); await p.waitForTimeout(300);
@@ -32,7 +32,7 @@ const OUT = process.argv[2] || 'e2e';
   { const g = await p.evaluate(() => window.__av.guideScreen('skin', 'skin.longitudinal')); const mid = g[Math.floor(g.length / 2)];
     await p.mouse.move(mid[0] - 7, mid[1]); await p.mouse.down(); for (let i = 1; i <= 12; i++) await p.mouse.move(mid[0] - 7 - i * 14, mid[1] - i * 2); await p.mouse.up(); await p.waitForTimeout(400);
     const s1 = await st(); console.log('RESULT forceps lift', s1.layers.skin.l > 0.1 || s1.layers.skin.m > 0.1 ? 'PASS' : 'FAIL', JSON.stringify(s1.layers.skin));
-    await key('Control+z'); await p.waitForTimeout(500); const s2 = await st(); console.log('RESULT forceps undo', s2.layers.skin.l === 0 && s2.layers.skin.m === 0 ? 'PASS' : 'FAIL'); }
+    if (s1.layers.skin.l > 0.1 || s1.layers.skin.m > 0.1) { await key('Control+z'); await p.waitForTimeout(500); const s2 = await st(); console.log('RESULT forceps undo', s2.layers.skin.l === 0 && s2.layers.skin.m === 0 && s2.layers.skin.cuts === 3 ? 'PASS' : 'FAIL'); } }
   // reflect with the reflect tool (click on a flap)
   await key('7');
   for (const side of ['skin.medial', 'skin.lateral']) { const c = await p.evaluate((n) => window.__av.meshScreen(n), side); if (c) { await p.mouse.click(c[0], c[1]); await p.waitForTimeout(400); } }
