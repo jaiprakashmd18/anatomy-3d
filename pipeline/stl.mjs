@@ -137,3 +137,25 @@ export function decimateTo(mesh, target) {
   for (let i = 0; i < 40; i++) { m = cluster(mesh, cell); if (m.idx.length / 3 <= target) return m; cell *= 1.15; }
   return m;
 }
+
+/** Taubin (lambda|mu) smoothing: removes clustering lumpiness without shrinking the volume. Boundary vertices are held. */
+export function taubin(mesh, iters = 8, lambda = 0.5, mu = -0.53) {
+  const n = mesh.pos.length / 3; const nbr = Array.from({ length: n }, () => new Set());
+  const edgeCount = new Map();
+  for (let t = 0; t < mesh.idx.length; t += 3) for (let k = 0; k < 3; k++) {
+    const a = mesh.idx[t + k], b = mesh.idx[t + (k + 1) % 3]; nbr[a].add(b); nbr[b].add(a);
+    const key = a < b ? `${a}_${b}` : `${b}_${a}`; edgeCount.set(key, (edgeCount.get(key) ?? 0) + 1);
+  }
+  const boundary = new Uint8Array(n); for (const [k, c] of edgeCount) if (c === 1) { const [a, b] = k.split('_').map(Number); boundary[a] = boundary[b] = 1; }
+  const lists = nbr.map((s) => [...s]); let p = Float32Array.from(mesh.pos); const q = new Float32Array(p.length);
+  const step = (f) => {
+    for (let i = 0; i < n; i++) {
+      const l = lists[i]; if (!l.length || boundary[i]) { q[i * 3] = p[i * 3]; q[i * 3 + 1] = p[i * 3 + 1]; q[i * 3 + 2] = p[i * 3 + 2]; continue; }
+      let x = 0, y = 0, z = 0; for (const j of l) { x += p[j * 3]; y += p[j * 3 + 1]; z += p[j * 3 + 2]; } x /= l.length; y /= l.length; z /= l.length;
+      q[i * 3] = p[i * 3] + f * (x - p[i * 3]); q[i * 3 + 1] = p[i * 3 + 1] + f * (y - p[i * 3 + 1]); q[i * 3 + 2] = p[i * 3 + 2] + f * (z - p[i * 3 + 2]);
+    }
+    const t = p; p = Float32Array.from(q); void t;
+  };
+  for (let it = 0; it < iters; it++) { step(lambda); step(mu); }
+  return { pos: p, idx: mesh.idx };
+}

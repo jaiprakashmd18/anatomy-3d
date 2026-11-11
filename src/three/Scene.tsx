@@ -12,6 +12,7 @@ import type { FlapSide, LayerId, Vec3 } from '../engine/types';
 import { STRUCTURE_BY_ID } from '../data/structures';
 import { LESSON } from '../data/lesson';
 import { registry } from './testHooks';
+import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 
 const V = (p: Vec3) => new THREE.Vector3(...p);
 
@@ -65,6 +66,7 @@ function cutRuns(c: { pts: Vec3[] }, bits?: boolean[]): Vec3[][] {
 function Specimen({ model }: { model: LimbModel }) {
   const s = useStore();
   const group = useRef<THREE.Group>(null);
+  const [lm, setLm] = React.useState<string | null>(null);
   const t0 = useRef(0);
   const highlight = useMemo(() => (s.lessonActive ? LESSON.steps[s.lessonStep]?.highlight ?? [] : []), [s.lessonActive, s.lessonStep]);
   useFrame((st, dt) => {
@@ -93,10 +95,10 @@ function Specimen({ model }: { model: LimbModel }) {
       {guideCuts.map((c) => (<Line key={c.id} points={c.pts.map(V)} color="#ffd166" lineWidth={3} dashed dashSize={0.7} gapSize={0.45} />))}
       {s.landmarksOn && model.meta.landmarks.map((l) => (
         <group key={l.id} position={l.position as Vec3}>
-          <mesh onPointerDown={(e) => { if (e.button === 0) { e.stopPropagation(); useStore.getState().clickLandmark(l.id); useStore.getState().say(`${l.label}${s.clickedLandmarks.includes(l.id) ? '' : ' — identified'}.`); } }}>
+          <mesh onPointerOver={() => setLm(l.id)} onPointerOut={() => setLm(null)} onPointerDown={(e) => { if (e.button === 0) { e.stopPropagation(); useStore.getState().clickLandmark(l.id); useStore.getState().say(`${l.label}${s.clickedLandmarks.includes(l.id) ? '' : ' — identified'}.`); } }}>
             <sphereGeometry args={[0.45, 12, 12]} /><meshBasicMaterial color={s.clickedLandmarks.includes(l.id) ? '#3ddc97' : '#ff4d8d'} depthTest={false} transparent opacity={0.9} />
           </mesh>
-          <Html center distanceFactor={60} style={{ pointerEvents: 'none' }} position={[0, 1.1, 0]}><span className="lm-label">{l.label.replace(/ \(.*\)/, '')}</span></Html>
+          {(lm === l.id) && <Html center distanceFactor={60} style={{ pointerEvents: 'none' }} position={[0, 1.1, 0]}><span className="lm-label">{l.label.replace(/ \(.*\)/, '')}</span></Html>}
         </group>
       ))}
       {d.pins.map((p, i) => (
@@ -262,8 +264,9 @@ function Interaction({ model }: { model: LimbModel }) {
     el.addEventListener('pointerdown', onDown, { capture: true });
     el.addEventListener('pointermove', onMove);
     window.addEventListener('pointerup', onUp);
-    window.addEventListener('pointercancel', (e) => { pointers.current.delete(e.pointerId); cancelDrag(); });
-    return () => { el.removeEventListener('pointerdown', onDown, { capture: true }); el.removeEventListener('pointermove', onMove); window.removeEventListener('pointerup', onUp); };
+    const onCancel = (e: PointerEvent) => { pointers.current.delete(e.pointerId); cancelDrag(); };
+    window.addEventListener('pointercancel', onCancel);
+    return () => { cancelDrag(); el.removeEventListener('pointerdown', onDown, { capture: true }); el.removeEventListener('pointermove', onMove); window.removeEventListener('pointerup', onUp); window.removeEventListener('pointercancel', onCancel); };
   }, [gl, camera, controls, model, ray]);
   return null;
 }
@@ -273,10 +276,21 @@ function Lights() {
   const k = useStore((s) => s.lightIntensity);
   return (<>
     <hemisphereLight args={['#dfe8ff', '#2b2320', 0.32 * k]} />
-    <directionalLight position={[30, 50, 70]} intensity={1.05 * k} color="#fff4e6" />
+    <directionalLight position={[30, 50, 70]} intensity={1.05 * k} color="#fff4e6" castShadow shadow-mapSize={[2048, 2048]} shadow-bias={-0.0004} shadow-normalBias={0.05} shadow-camera-left={-45} shadow-camera-right={45} shadow-camera-top={45} shadow-camera-bottom={-45} shadow-camera-near={10} shadow-camera-far={220} />
     <directionalLight position={[-50, 10, 40]} intensity={0.35 * k} color="#bcd0ff" />
     <directionalLight position={[0, 20, -80]} intensity={0.45 * k} color="#ffffff" />
   </>);
+}
+
+/** Procedural studio environment (no network) for soft reflections on wet tissue. */
+function Env() {
+  const { gl, scene } = useThree();
+  useEffect(() => {
+    const pm = new THREE.PMREMGenerator(gl); const tex = pm.fromScene(new RoomEnvironment(), 0.04).texture;
+    scene.environment = tex; (scene as THREE.Scene & { environmentIntensity: number }).environmentIntensity = 0.5;
+    return () => { scene.environment = null; tex.dispose(); pm.dispose(); };
+  }, [gl, scene]);
+  return null;
 }
 
 function FpsProbe() {
@@ -289,10 +303,10 @@ export function Scene({ model }: { model: LimbModel }) {
   const quality = useStore((s) => s.quality); const theme = useStore((s) => s.theme); const orientation = useStore((s) => s.orientation);
   const dpr = quality === 'low' ? 1 : quality === 'medium' ? Math.min(1.5, window.devicePixelRatio) : quality === 'high' ? Math.min(2, window.devicePixelRatio) : Math.min(3, Math.max(2, window.devicePixelRatio));
   return (
-    <Canvas dpr={dpr} camera={{ position: [0, 0, 120], fov: 35, near: 1, far: 600 }} gl={{ antialias: quality !== 'low', stencil: false, preserveDrawingBuffer: true, powerPreference: 'high-performance' }} style={{ touchAction: 'none' }}>
+    <Canvas shadows={quality === 'high' || quality === 'ultra'} dpr={dpr} camera={{ position: [0, 0, 120], fov: 35, near: 1, far: 600 }} gl={{ antialias: quality !== 'low', stencil: false, preserveDrawingBuffer: true, powerPreference: 'high-performance' }} style={{ touchAction: 'none' }}>
       <color attach="background" args={[theme === 'dark' ? '#10141b' : '#dfe4ec']} />
       <fog attach="fog" args={[theme === 'dark' ? '#10141b' : '#dfe4ec', 160, 420]} />
-      <Lights />
+      <Lights /><Env />
       <Specimen model={model} />
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, orientation === 'table' ? -6.4 : -42, 0]} receiveShadow>
         <circleGeometry args={[orientation === 'table' ? 90 : 60, 64]} /><meshStandardMaterial color={theme === 'dark' ? '#1b2330' : '#b9c2cf'} metalness={0.55} roughness={0.45} />

@@ -25,11 +25,18 @@ const OUT = process.argv[2] || 'e2e';
     console.log(cutId, JSON.stringify((await st()).toast));
   };
   await trace('skin', 'skin.longitudinal', '1'); await shot('1-longitudinal');
+  console.log('RESULT cut1', (await st()).layers.skin.cuts === 1 ? 'PASS' : 'FAIL');
   await trace('skin', 'skin.proximal', '1'); await trace('skin', 'skin.distal', '1'); await shot('2-incised');
+  // forceps: grab the lateral flap edge and drag it away; expect a partial lift, then undo it
+  await key('3');
+  { const g = await p.evaluate(() => window.__av.guideScreen('skin', 'skin.longitudinal')); const mid = g[Math.floor(g.length / 2)];
+    await p.mouse.move(mid[0] - 7, mid[1]); await p.mouse.down(); for (let i = 1; i <= 12; i++) await p.mouse.move(mid[0] - 7 - i * 14, mid[1] - i * 2); await p.mouse.up(); await p.waitForTimeout(400);
+    const s1 = await st(); console.log('RESULT forceps lift', s1.layers.skin.l > 0.1 || s1.layers.skin.m > 0.1 ? 'PASS' : 'FAIL', JSON.stringify(s1.layers.skin));
+    await key('Control+z'); await p.waitForTimeout(500); const s2 = await st(); console.log('RESULT forceps undo', s2.layers.skin.l === 0 && s2.layers.skin.m === 0 ? 'PASS' : 'FAIL'); }
   // reflect with the reflect tool (click on a flap)
   await key('7');
   for (const side of ['skin.medial', 'skin.lateral']) { const c = await p.evaluate((n) => window.__av.meshScreen(n), side); if (c) { await p.mouse.click(c[0], c[1]); await p.waitForTimeout(400); } }
-  await shot('3-skin-reflected', 2500); console.log(JSON.stringify(await st()));
+  await shot('3-skin-reflected', 2500); console.log(JSON.stringify(await st())); { const x = await st(); console.log('RESULT skin reflected', x.layers.skin.m === 1 && x.layers.skin.l === 1 ? 'PASS' : 'FAIL'); }
   // ---- superficial fascia
   await trace('superficial_fascia', 'superficial_fascia.longitudinal', '2'); await shot('4-sf-incised');
   await key('6'); { const c = await p.evaluate(() => window.__av.meshScreen('superficial_fascia.medial')); if (c) await p.mouse.click(c[0], c[1]); await p.waitForTimeout(300); const c2 = await p.evaluate(() => window.__av.meshScreen('superficial_fascia.lateral')); if (c2) await p.mouse.click(c2[0], c2[1]); }
@@ -39,14 +46,14 @@ const OUT = process.argv[2] || 'e2e';
   await trace('deep_fascia', 'deep_fascia.longitudinal', '1'); await key('7');
   for (const side of ['deep_fascia.medial', 'deep_fascia.lateral']) { const c = await p.evaluate((n) => window.__av.meshScreen(n), side); if (c) { await p.mouse.click(c[0], c[1]); await p.waitForTimeout(400); } }
   await shot('6-deep-reflected', 2500); console.log('deep', JSON.stringify((await st()).layers));
-  await key('5'); { const c = await p.evaluate(() => window.__av.meshScreen('median_nerve')); if (c) { await p.mouse.click(c[0], c[1]); await p.waitForTimeout(500); console.log('selected', (await st()).sel); } }
+  await key('5'); { await p.evaluate(() => window.__av.setCamera([42, 4, 46], [2, 5, 0])); await p.waitForTimeout(2500); const c = await p.evaluate(() => window.__av.meshScreen('median_nerve')); if (c) { await p.mouse.click(c[0], c[1]); await p.waitForTimeout(500); console.log('RESULT select median_nerve', (await st()).sel === 'median_nerve' ? 'PASS' : 'FAIL ' + (await st()).sel); } }
   await p.evaluate(() => window.__av.useStore.getState().patch({ rightTab: 'info' })); await shot('7-median-selected', 1200);
   // retract biceps
-  await key('4'); { const c = await p.evaluate(() => window.__av.meshScreen('biceps_brachii#37686')); if (c) { await p.mouse.click(c[0], c[1]); await p.waitForTimeout(600); } } await shot('8-biceps-retracted', 2000); console.log('retract', JSON.stringify((await st()).retracted));
+  await key('4'); { const c = await p.evaluate(() => window.__av.meshScreen('biceps_brachii#37686')); if (c) { await p.mouse.click(c[0], c[1]); await p.waitForTimeout(600); } } await shot('8-biceps-retracted', 2000); console.log('RESULT retract', (await st()).retracted.biceps_brachii === 1 ? 'PASS' : 'FAIL');
   // undo last, save, reset, restore
-  await key('Control+z'); await p.waitForTimeout(300); console.log('after undo', JSON.stringify((await st()).retracted), (await st()).log.length);
+  await key('Control+z'); await p.waitForTimeout(300); console.log('RESULT undo', JSON.stringify((await st()).retracted) === '{}' ? 'PASS' : 'FAIL');
   await p.evaluate(() => window.__av.useStore.getState().saveSession('e2e'));
-  await p.evaluate(() => window.__av.useStore.getState().reset()); console.log('after reset', JSON.stringify((await st()).layers));
-  await p.evaluate(() => { const s = window.__av.useStore.getState(); s.loadSession(s.sessions[0].id); }); await shot('9-restored', 2500); console.log('restored', JSON.stringify((await st()).layers));
+  await p.evaluate(() => window.__av.useStore.getState().reset()); { const x = await st(); console.log('RESULT reset', x.layers.skin.cuts === 0 ? 'PASS' : 'FAIL'); }
+  await p.evaluate(() => { const s = window.__av.useStore.getState(); s.loadSession(s.sessions[0].id); }); await shot('9-restored', 2500); { const x = await st(); console.log('RESULT restore', x.layers.skin.cuts === 3 && x.layers.deep_fascia.m === 1 ? 'PASS' : 'FAIL'); }
   await b.close();
 })();

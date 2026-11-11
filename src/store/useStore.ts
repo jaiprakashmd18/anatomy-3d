@@ -48,6 +48,7 @@ interface UIState {
   identified: string[];
   lessonActive: boolean;
   lessonStep: number;
+  lessonQuizDone: boolean;
   leftTab: 'regions' | 'structures' | 'layers' | 'lessons';
   rightTab: 'info' | 'lesson' | 'tutor' | 'study' | 'history';
   modal: 'coverage' | 'sessions' | 'auth' | 'account' | 'legal' | null;
@@ -97,7 +98,7 @@ export const useStore = create<UIState & Actions>((set, get) => ({
   hist: D.newHistory(), tool: 'probe', mode: 'cadaver', xrayOpacity: 0.35, selected: null, hovered: null, isolate: false,
   layerVisible: flags(true), layerOpacity: flags(1), layerLocked: flags(false), cutProgress: {}, preview: {}, toast: null, cameraRequest: null, cameraVisits: [], focusRequest: null,
   orientation: 'anatomical', lightIntensity: 1, quality: safe.get<Quality>('quality', 'medium'), showFps: false, theme: safe.get('theme', 'dark'), landmarksOn: true, clickedLandmarks: [],
-  identified: [], lessonActive: false, lessonStep: 0, leftTab: 'structures', rightTab: 'info', modal: null,
+  identified: [], lessonActive: false, lessonStep: 0, lessonQuizDone: false, leftTab: 'structures', rightTab: 'info', modal: null,
   bookmarks: safe.get('bookmarks', []), notes: safe.get('notes', {}), sessions: safe.get('sessions', []),
   progress: safe.get('progress', { lessonDone: {}, quizBest: 0, viewed: [] }), loadError: null, fps: 0, user: null, plan: 'free', authReady: false,
 
@@ -141,14 +142,14 @@ export const useStore = create<UIState & Actions>((set, get) => ({
     set({ hist: JSON.parse(JSON.stringify(sess.history)), preview: {}, cutProgress: {}, modal: null }); get().say(`Restored "${sess.name}".`);
   },
   deleteSession: (id) => { if (get().user) void deleteCloudSession(id); set((s) => { const sessions = s.sessions.filter((x) => x.id !== id); safe.set('sessions', sessions); return { sessions }; }); },
-  startLesson: () => set({ lessonActive: true, lessonStep: 0, rightTab: 'lesson', identified: [], clickedLandmarks: [], cameraVisits: [], hist: D.newHistory(), selected: null }),
+  startLesson: () => set({ lessonActive: true, lessonStep: 0, lessonQuizDone: false, rightTab: 'lesson', identified: [], clickedLandmarks: [], cameraVisits: [], hist: D.newHistory(), selected: null }),
   stopLesson: () => set({ lessonActive: false }),
   addPin(p, structureId) {
     const s = get(); const name = STRUCTURE_BY_ID[structureId]?.name ?? structureId;
     const pin: Pin = { id: `p${Date.now()}`, structureId, position: p, label: name };
     get().apply(D.addPin(s.hist.present, pin));
   },
-  recordQuiz: (score) => set((s) => { const progress = { ...s.progress, quizBest: Math.max(s.progress.quizBest, score) }; safe.set('progress', progress); return { progress }; }),
+  recordQuiz: (score) => set((s) => { const progress = { ...s.progress, quizBest: Math.max(s.progress.quizBest, score) }; safe.set('progress', progress); queueMicrotask(syncUserState); return { progress, lessonQuizDone: s.lessonActive ? true : s.lessonQuizDone }; }),
 }));
 
 // ---------- derived helpers ----------

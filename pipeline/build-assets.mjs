@@ -4,7 +4,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { readSTL, readTris, weld, normals, cluster, decimateTo, compact, bbox } from './stl.mjs';
+import { readSTL, readTris, weld, normals, cluster, decimateTo, compact, bbox, taubin } from './stl.mjs';
 import { writeGLB } from './glb.mjs';
 import { makeFrame, radialGrid, wrap } from './limb-frame.mjs';
 import { SOURCE, MESH_STRUCTURES, LIMB_TISSUE, HULL_MUSCLES, SKIN_FMA, WINDOW, HINGE_THETA_DEG, REFLECT_ANGLE_DEG, CURVES } from './limb-config.mjs';
@@ -22,7 +22,7 @@ const parts = []; // {sid, fma, layer, mesh, nor, srcTris}
 for (const [sid, name, fmas, layer, budget] of MESH_STRUCTURES) {
   for (const fma of fmas) {
     const raw = readSTL(path.join(SRC, `FMA${fma}.stl`));
-    const mesh = decimateTo(raw, Math.round((budget * Number(process.env.DETAIL ?? 4)) / fmas.length));
+    const mesh = taubin(decimateTo(raw, Math.round((budget * Number(process.env.DETAIL ?? 4)) / fmas.length)), Number(process.env.SMOOTH ?? 10));
     parts.push({ sid, fma, layer, mesh, nor: normals(mesh), srcTris: raw.idx.length / 3 });
   }
 }
@@ -81,9 +81,11 @@ const skinPts = []; for (let i = 0; i < keepTris.length; i += 3) skinPts.push([k
 
 // ---------- 4. radial grids ----------
 const uSkinMax = frame.segs[2].u0 + 28; // skin is resampled up to just beyond the wrist; the hand is left unskinned
-const Rskin = radialGrid(frame, uLo, uSkinMax, 2.0, 216, skinPts, 'p90', 9);
+const Rskin = radialGrid(frame, uLo, uSkinMax, 2.0, 216, skinPts, 'p90', 45);
+// Skin must sit a physically plausible 2-15 mm outside the muscle/bone envelope (rejects trunk skin bridging the axilla).
+const skinR = (u, t) => Math.max(Rhull.at(u, t) + 2.5, Math.min(Rskin.at(u, t), Rhull.at(u, t) + 15));
 const SUPF_DEPTH = 4.0, DEEP_OFF = 0.8;
-const Rsupf = (u, t) => Rskin.at(u, t) - SUPF_DEPTH;
+const Rsupf = (u, t) => skinR(u, t) - SUPF_DEPTH;
 const Rdeep = (u, t) => Math.min(Rhull.at(u, t) + DEEP_OFF, Rsupf(u, t) - 0.5);
 
 // ---------- 5. layer sheets ----------
@@ -115,9 +117,10 @@ function buildSheet(radiusFn, uMin, uMax, nT = 216) {
     const g = um > uTop && um < uBot && Math.abs(tm) < thetaH ? (tm >= 0 ? 1 : 2) : 0;
     idx.push(a, c, b, b, c, d); grp.push(g, g);
   }
-  return { mesh: { pos: Float32Array.from(pos), idx: Uint32Array.from(idx) }, grp };
+  // Taubin-smooth the sheet to remove creases from the bent elbow frame and sampling noise (flap membership is per-quad, so unaffected).
+  return { mesh: taubin({ pos: Float32Array.from(pos), idx: Uint32Array.from(idx) }, 30), grp };
 }
-const sk = buildSheet((u, t) => Rskin.at(u, t), uLo, uSkinMax);
+const sk = buildSheet(skinR, uLo, uSkinMax);
 const supf = buildSheet(Rsupf, uTop, uBot), deep = buildSheet(Rdeep, uTop, uBot);
 const sheets = {
   skin: { mesh: sk.mesh, nor: normals(sk.mesh), grp: sk.grp },
@@ -126,7 +129,7 @@ const sheets = {
 };
 const classify = (sheet) => { const groups = [[], [], []]; sheet.grp.forEach((g, t) => groups[g].push(t)); return groups; };
 
-const radiusFnFor = { skin: (u, t) => Rskin.at(u, t) + 0.5, superficial_fascia: (u, t) => Rsupf(u, t) + 0.4, deep_fascia: (u, t) => Rdeep(u, t) + 0.4 };
+const radiusFnFor = { skin: (u, t) => skinR(u, t) + 1.2, superficial_fascia: (u, t) => Rsupf(u, t) + 1.2, deep_fascia: (u, t) => Rdeep(u, t) + 1.2 };
 const poly = (pts) => pts.map((p) => p);
 function cutPaths(layer) {
   const R = radiusFnFor[layer]; const out = [];

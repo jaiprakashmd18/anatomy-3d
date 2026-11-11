@@ -48,8 +48,8 @@ function LessonPanel() {
   const s = useStore();
   const ctx = { d: s.hist.present, identified: s.identified, landmarks: s.clickedLandmarks, camera: s.cameraVisits, selected: s.selected };
   if (!s.lessonActive) return <div className="empty"><h4>No lesson running</h4><p>Open the <b>Lessons</b> tab on the left and start the guided anterior-arm dissection, or continue in free dissection.</p><button className="primary" onClick={() => s.startLesson()}>Start anterior arm lesson</button></div>;
-  const steps = LESSON.steps; const done = steps.map((st) => (st.id === 'quiz' ? s.progress.quizBest > 0 && s.lessonStep === steps.length - 1 && false : st.done(ctx)));
-  const cur = steps[s.lessonStep]; const curDone = cur.id === 'quiz' ? false : cur.done(ctx);
+  const steps = LESSON.steps; const done = steps.map((st) => (st.id === 'quiz' ? s.lessonQuizDone : st.done(ctx)));
+  const cur = steps[s.lessonStep]; const curDone = cur.id === 'quiz' ? s.lessonQuizDone : cur.done(ctx);
   return (
     <div className="lesson">
       <h4>{LESSON.title}</h4>

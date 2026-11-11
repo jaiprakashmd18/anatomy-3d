@@ -45,8 +45,8 @@ export class LimbModel {
     for (const m of nodes) {
       const ex = (m.userData ?? {}) as { structure?: string; layer?: string; group?: string };
       m.geometry.computeBoundingSphere();
-      const mat = new THREE.MeshStandardMaterial({ side: THREE.DoubleSide, roughness: 0.7, metalness: 0.0 });
-      m.material = mat; this.mats.set(m, mat); m.castShadow = false; m.receiveShadow = false;
+      const mat = new THREE.MeshPhysicalMaterial({ side: THREE.DoubleSide, roughness: 0.7, metalness: 0.0 });
+      m.material = mat; this.mats.set(m, mat); m.castShadow = true; m.receiveShadow = true;
       // glTF loaders strip '.' and similar characters from node names, so identify meshes by node extras.
       if (ex.structure && (ex as { fma?: number }).fma !== undefined) {
         const sid = ex.structure; m.name = `${sid}#${(ex as { fma?: number }).fma}`; m.userData = { kind: 'structure', structure: sid };
@@ -70,8 +70,8 @@ export class LimbModel {
     for (const c of meta.curves) {
       const curve = new THREE.CatmullRomCurve3(c.points.map((p) => new THREE.Vector3(...p)), false, 'centripetal');
       const g = new THREE.TubeGeometry(curve, 64, c.radius, 10, false);
-      const mat = new THREE.MeshStandardMaterial({ roughness: 0.4 });
-      const m = new THREE.Mesh(g, mat); m.name = c.id; m.userData = { kind: 'structure', structure: c.id };
+      const mat = new THREE.MeshPhysicalMaterial({ roughness: 0.4 });
+      const m = new THREE.Mesh(g, mat); m.castShadow = true; m.receiveShadow = true; m.name = c.id; m.userData = { kind: 'structure', structure: c.id };
       this.mats.set(m, mat); this.structureMeshes.set(c.id, [m]); this.all.push(m); this.curveMeshes.push(m); this.root.add(m);
     }
     // incision lines
@@ -146,6 +146,9 @@ export function updateAppearance(model: LimbModel, c: AppearanceCtx) {
     if (!show) return;
     const op = look.opacity * (c.mode === 'xray' ? Math.min(1, c.xrayOpacity / 0.35) : 1) * c.layerOpacity[vk];
     mat.color.set(look.color); mat.roughness = look.roughness; mat.opacity = Math.min(1, op);
+    const phys = mat as THREE.MeshPhysicalMaterial; // moist, glossy dissected tissue vs. matte dry skin/bone
+    const wet = c.mode !== 'xray' && (kind === 'muscle' || kind === 'nerve' || kind === 'artery' || kind === 'vein');
+    phys.clearcoat = wet ? 0.35 : 0; phys.clearcoatRoughness = 0.35; phys.sheen = kind === 'skin' && c.mode !== 'xray' ? 0.6 : 0; phys.sheenRoughness = 0.5; phys.sheenColor.set('#ffd9c8'); phys.envMapIntensity = 0.9;
     const transparent = op < 0.999; if (mat.transparent !== transparent) { mat.transparent = transparent; mat.needsUpdate = true; }
     mat.depthWrite = !(transparent && (c.mode === 'xray' || kind === 'fascia'));
     mat.side = THREE.FrontSide;
