@@ -3,6 +3,8 @@ import * as D from '../engine/dissection';
 import type { ActionResult, FlapSide, LayerId, ToolId, Vec3, Pin } from '../engine/types';
 import { STRUCTURE_BY_ID } from '../data/structures';
 import { LESSON } from '../data/lesson';
+import { saveCloudSession, deleteCloudSession, pushUserState } from '../cloud/sync';
+import type { Plan } from '../shared/plan';
 
 export type Mode = 'cadaver' | 'atlas' | 'xray';
 export type VisKey = 'skin' | 'fascia' | 'muscle' | 'bone' | 'nerve' | 'artery' | 'vein';
@@ -48,7 +50,10 @@ interface UIState {
   lessonStep: number;
   leftTab: 'regions' | 'structures' | 'layers' | 'lessons';
   rightTab: 'info' | 'lesson' | 'tutor' | 'study' | 'history';
-  modal: 'coverage' | 'sessions' | null;
+  modal: 'coverage' | 'sessions' | 'auth' | 'account' | 'legal' | null;
+  user: { id: string; email: string } | null;
+  plan: Plan;
+  authReady: boolean;
   bookmarks: string[];
   notes: Record<string, string>;
   sessions: SavedSession[];
@@ -94,7 +99,7 @@ export const useStore = create<UIState & Actions>((set, get) => ({
   orientation: 'anatomical', lightIntensity: 1, quality: safe.get<Quality>('quality', 'medium'), showFps: false, theme: safe.get('theme', 'dark'), landmarksOn: true, clickedLandmarks: [],
   identified: [], lessonActive: false, lessonStep: 0, leftTab: 'structures', rightTab: 'info', modal: null,
   bookmarks: safe.get('bookmarks', []), notes: safe.get('notes', {}), sessions: safe.get('sessions', []),
-  progress: safe.get('progress', { lessonDone: {}, quizBest: 0, viewed: [] }), loadError: null, fps: 0,
+  progress: safe.get('progress', { lessonDone: {}, quizBest: 0, viewed: [] }), loadError: null, fps: 0, user: null, plan: 'free', authReady: false,
 
   setTool: (tool) => set({ tool, preview: {} }),
   setMode: (mode) => set({ mode }),
@@ -122,18 +127,20 @@ export const useStore = create<UIState & Actions>((set, get) => ({
   setLayerVisible: (k, v) => set((s) => ({ layerVisible: { ...s.layerVisible, [k]: v } })),
   setLayerOpacity: (k, v) => set((s) => ({ layerOpacity: { ...s.layerOpacity, [k]: v } })),
   toggleLock: (k) => set((s) => ({ layerLocked: { ...s.layerLocked, [k]: !s.layerLocked[k] } })),
-  toggleBookmark: (id) => set((s) => { const bookmarks = s.bookmarks.includes(id) ? s.bookmarks.filter((b) => b !== id) : [...s.bookmarks, id]; safe.set('bookmarks', bookmarks); return { bookmarks }; }),
-  setNote: (id, text) => set((s) => { const notes = { ...s.notes, [id]: text }; safe.set('notes', notes); return { notes }; }),
+  toggleBookmark: (id) => set((s) => { const bookmarks = s.bookmarks.includes(id) ? s.bookmarks.filter((b) => b !== id) : [...s.bookmarks, id]; safe.set('bookmarks', bookmarks); queueMicrotask(syncUserState); return { bookmarks }; }),
+  setNote: (id, text) => set((s) => { const notes = { ...s.notes, [id]: text }; safe.set('notes', notes); queueMicrotask(syncUserState); return { notes }; }),
   clickLandmark: (id) => set((s) => ({ clickedLandmarks: s.clickedLandmarks.includes(id) ? s.clickedLandmarks : [...s.clickedLandmarks, id] })),
   saveSession(name) {
     const s = get(); const sess: SavedSession = { id: `s${Date.now()}`, name: name || `Dissection ${s.sessions.length + 1}`, savedAt: new Date().toISOString(), history: JSON.parse(JSON.stringify(s.hist)) };
-    const sessions = [sess, ...s.sessions].slice(0, 20); safe.set('sessions', sessions); set({ sessions }); get().say(`Saved "${sess.name}".`);
+    const sessions = [sess, ...s.sessions].slice(0, 20); safe.set('sessions', sessions); set({ sessions });
+    if (s.user) saveCloudSession(sess, s.user.id).then(() => get().say(`Saved "${sess.name}" to your account.`)).catch(() => get().say(`Saved "${sess.name}" on this device; cloud save failed.`, false));
+    else get().say(`Saved "${sess.name}" on this device (sign in to keep it in the cloud).`);
   },
   loadSession(id) {
     const sess = get().sessions.find((x) => x.id === id); if (!sess) return get().say('Saved session not found.', false);
     set({ hist: JSON.parse(JSON.stringify(sess.history)), preview: {}, cutProgress: {}, modal: null }); get().say(`Restored "${sess.name}".`);
   },
-  deleteSession: (id) => set((s) => { const sessions = s.sessions.filter((x) => x.id !== id); safe.set('sessions', sessions); return { sessions }; }),
+  deleteSession: (id) => { if (get().user) void deleteCloudSession(id); set((s) => { const sessions = s.sessions.filter((x) => x.id !== id); safe.set('sessions', sessions); return { sessions }; }); },
   startLesson: () => set({ lessonActive: true, lessonStep: 0, rightTab: 'lesson', identified: [], clickedLandmarks: [], cameraVisits: [], hist: D.newHistory(), selected: null }),
   stopLesson: () => set({ lessonActive: false }),
   addPin(p, structureId) {
@@ -148,3 +155,14 @@ export const useStore = create<UIState & Actions>((set, get) => ({
 export const dissection = () => useStore.getState().hist.present;
 export const lessonStepsDone = (s: UIState) => LESSON.steps.filter((st) => st.done({ d: s.hist.present, identified: s.identified, landmarks: s.clickedLandmarks, camera: s.cameraVisits, selected: s.selected })).length;
 export type { LayerId, FlapSide };
+
+let syncTimer: ReturnType<typeof setTimeout> | undefined;
+/** Debounced push of bookmarks/notes/progress to the signed-in user's cloud row. */
+export function syncUserState() {
+  clearTimeout(syncTimer);
+  syncTimer = setTimeout(() => {
+    const s = useStore.getState(); if (!s.user) return;
+    let revision: unknown = {}; try { revision = JSON.parse(localStorage.getItem('anatomyverse.v1.revision') ?? '{}'); } catch { /* ignore */ }
+    void pushUserState(s.user.id, { bookmarks: s.bookmarks, notes: s.notes, progress: s.progress, revision }).catch(() => undefined);
+  }, 1500);
+}

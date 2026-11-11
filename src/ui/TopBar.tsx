@@ -26,6 +26,7 @@ export function TopBar({ onToggleLeft, onToggleRight }: { onToggleLeft(): void; 
       <select className="chip" value={s.quality} onChange={(e) => s.patch({ quality: e.target.value as never })} aria-label="Graphics quality"><option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option><option value="ultra">Ultra (4K)</option></select>
       <button className="chip" onClick={() => s.patch({ showFps: !s.showFps })} aria-pressed={s.showFps}>FPS</button>
       <button className="chip" onClick={() => s.patch({ modal: 'sessions' })}>Save / Resume</button>
+      <button className={`chip ${s.user ? 'on' : ''}`} onClick={() => s.patch({ modal: s.user ? 'account' : 'auth' })} aria-label="Account">{s.user ? `${s.plan === 'pro' ? '★ ' : ''}${s.user.email.split('@')[0]}` : 'Sign in'}</button>
       <button className="chip" onClick={() => s.patch({ modal: 'coverage' })}>Coverage</button>
       <button className="chip" onClick={() => s.patch({ theme: s.theme === 'dark' ? 'light' : 'dark' })} aria-label="Toggle theme">{s.theme === 'dark' ? '☀' : '☾'}</button>
       <button className="chip" onClick={fs} aria-label="Fullscreen">⛶</button>

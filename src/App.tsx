@@ -9,6 +9,8 @@ import { LeftPanel } from './ui/LeftPanel';
 import { RightPanel } from './ui/RightPanel';
 import { Toolbar } from './ui/Toolbar';
 import { Modals } from './ui/Modals';
+import { AuthModal, LegalModal } from './ui/AuthModal';
+import { useAuthBootstrap } from './cloud/useAuth';
 import { STRUCTURE_BY_ID } from './data/structures';
 import type { ToolId } from './engine/types';
 
@@ -22,6 +24,7 @@ async function loadModel(onProgress: (p: number) => void): Promise<LimbModel> {
 
 export function App() {
   const [model, setModel] = React.useState<LimbModel | null>(null); const [prog, setProg] = React.useState(0); const [err, setErr] = React.useState<string | null>(null);
+  useAuthBootstrap();
   const s = useStore(); const [lOpen, setL] = React.useState(false); const [rOpen, setR] = React.useState(false);
   React.useEffect(() => { loadModel(setProg).then(setModel).catch((e) => setErr(String(e?.message ?? e))); }, []);
   React.useEffect(() => { document.documentElement.dataset.theme = s.theme; }, [s.theme]);
@@ -63,6 +66,8 @@ export function App() {
       </main>
       <RightPanel />
       {model && <Modals meta={model.meta} />}
+      {(s.modal === 'auth' || s.modal === 'account') && <AuthModal />}
+      {s.modal === 'legal' && <LegalModal />}
     </div>
   );
 }

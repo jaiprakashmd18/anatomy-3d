@@ -5,16 +5,16 @@ import type { LimbMeta } from '../three/limb';
 
 export function Modals({ meta }: { meta: LimbMeta }) {
   const s = useStore(); const [name, setName] = React.useState('');
-  if (!s.modal) return null;
+  if (s.modal !== 'sessions' && s.modal !== 'coverage') return null;
   const close = () => s.patch({ modal: null });
   return (
     <div className="modal-bg" onClick={close} role="presentation">
       <div className="modal" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
         <button className="x" onClick={close} aria-label="Close">✕</button>
         {s.modal === 'sessions' && (<>
-          <h3>Save & resume dissection</h3>
+          <h3>Save & resume dissection</h3>{s.user ? <small className="muted">Synced to your account.</small> : <small className="muted">Saved on this device only — <button className="link" onClick={() => s.patch({ modal: 'auth' })}>sign in</button> to sync across devices.</small>}
           <form className="row-form" onSubmit={(e) => { e.preventDefault(); s.saveSession(name); setName(''); }}><input value={name} onChange={(e) => setName(e.target.value)} placeholder="Session name" /><button className="primary">Save current dissection</button></form>
-          {s.sessions.length === 0 ? <p className="muted">No saved sessions yet. Sessions are stored in this browser (localStorage).</p> : <ul className="sessions">{s.sessions.map((x) => (<li key={x.id}><div><b>{x.name}</b><small>{new Date(x.savedAt).toLocaleString()} · {x.history.log.length} actions</small></div><div><button onClick={() => s.loadSession(x.id)}>Restore</button><button onClick={() => s.deleteSession(x.id)}>Delete</button></div></li>))}</ul>}
+          {s.sessions.length === 0 ? <p className="muted">No saved sessions yet. Saves stay on this device until you sign in; then they sync to your account.</p> : <ul className="sessions">{s.sessions.map((x) => (<li key={x.id}><div><b>{x.name}</b><small>{new Date(x.savedAt).toLocaleString()} · {x.history.log.length} actions</small></div><div><button onClick={() => s.loadSession(x.id)}>Restore</button><button onClick={() => s.deleteSession(x.id)}>Delete</button></div></li>))}</ul>}
         </>)}
         {s.modal === 'coverage' && (<>
           <h3>Coverage, status & honesty report</h3>

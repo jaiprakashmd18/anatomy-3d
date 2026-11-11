@@ -12,7 +12,7 @@ identify structures, read their anatomy, undo/reset, and save/resume. Built on *
 ```bash
 npm install
 npm run dev          # http://localhost:5173
-npm test             # 33 unit/integration tests (engine, content↔asset integrity, tutor grounding)
+npm test             # 39 unit/integration tests (engine, content↔asset integrity, tutor grounding)
 npm run build        # type-check + production build into dist/
 ```
 
@@ -31,7 +31,7 @@ schematic neurovascular curves → writes GLB + metadata (licence, provenance, c
 
 ### Deploy
 Static site: `npm run build`, then deploy `dist/` to Vercel/Netlify/GitHub Pages (`base` is `./`). Serve `assets/limb.glb` with gzip/brotli (the CDN does this).
-`api/tutor.ts` is an **optional, untested** Vercel edge function for an LLM tutor (needs `ANTHROPIC_API_KEY`); without it the built‑in grounded tutor is used.
+Accounts, cloud saves, Stripe subscription and the Pro AI tutor are implemented in `src/cloud/` and `api/` but need your own Supabase/Stripe/Anthropic keys — see `docs/SETUP_ACCOUNTS_AND_BILLING.md` (live calls **untested**; unit-tested plan/quotas/webhook signature). Without keys the app runs local-only.
 
 ## Using it (acceptance walk‑through)
 1. Rotate: left‑drag; zoom: wheel/pinch; pan: right‑drag/two fingers. **View** buttons: anterior/posterior/lateral/medial; **Regions** tab for shoulder…hand.
@@ -64,7 +64,8 @@ Keyboard: 1‑8 tools · I isolate · Esc deselect · F fullscreen · Ctrl+Z/Y �
 | Full‑body cadaver on a table | **Blocked by missing assets** (cropped limb specimen; "Place on table" just re‑orients it) |
 | Freeform volumetric cutting, soft‑tissue physics (PBD/FEM), suction/irrigation | **Planned** |
 | Other regions/systems (lower limb, thorax, abdomen, head & neck, back, pelvis, CNS, viscera, 206 bones) | **Planned** |
-| Accounts / Supabase sync / offline cache / LODs / Draco | **Planned** (`docs/supabase-schema.sql` is a draft) |
+| Accounts, cloud save, Stripe Pro plan, gated AI tutor | **Implemented, live integration untested** (needs keys; see setup doc) |
+| Offline cache / LODs / Draco compression | **Planned** |
 
 ## What the 3D data really is
 * **Real BodyParts3D meshes (CC BY‑SA 2.1 JP)**: 5 bones of the shoulder girdle/arm/forearm, 8 carpals, 5 metacarpals, ~36 muscles (shoulder, arm, forearm; trunk muscles are context only). Decimated by vertex clustering.

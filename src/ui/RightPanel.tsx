@@ -7,6 +7,7 @@ import { TOPICS } from '../data/topics';
 import { tutorAnswer, TutorCtx } from '../engine/tutor';
 import * as D from '../engine/dissection';
 import { visibilityOf, coveringLabels, FID_LABEL } from './util';
+import { askTutor, cloudEnabled } from '../cloud/client';
 
 const Field = ({ label, children }: { label: string; children?: React.ReactNode }) => (children ? <div className="field"><h5>{label}</h5><div>{children}</div></div> : null);
 const Bul = ({ items }: { items: string[] }) => (items.length ? <ul>{items.map((i, k) => <li key={k}>{i}</li>)}</ul> : null);
@@ -75,14 +76,30 @@ function Tutor() {
     layersCovering: (id) => coveringLabels(id, d), visibility: (id) => visibilityOf(id, d),
     exposedIds: STRUCTURES.filter((x) => visibilityOf(x.id, d) === 'exposed').map((x) => x.id),
   }), [s.selected, s.lessonActive, s.lessonStep, s.mode, d]);
-  const ask = (text: string) => { if (!text.trim()) return; const r = tutorAnswer(text, ctx); setLog((l) => [...l, { who: 'me', text }, { who: 'ai', text: r.text, sources: r.sources }]); setQ(''); setTimeout(() => end.current?.scrollIntoView({ behavior: 'smooth' }), 30); };
+  const [busy, setBusy] = React.useState(false);
+  const push = (m: { who: 'me' | 'ai'; text: string; sources?: string[] }[]) => { setLog((l) => [...l, ...m]); setTimeout(() => end.current?.scrollIntoView({ behavior: 'smooth' }), 30); };
+  const ask = async (text: string) => {
+    if (!text.trim() || busy) return; setQ('');
+    const local = tutorAnswer(text, ctx);
+    if (!(cloudEnabled && s.user && s.plan === 'pro')) { // free / signed-out: grounded local tutor (no LLM)
+      push([{ who: 'me', text }, { who: 'ai', text: local.text, sources: local.sources }]); return;
+    }
+    setBusy(true); push([{ who: 'me', text }]);
+    try {
+      const covering = Object.fromEntries(STRUCTURES.map((x) => [x.id, coveringLabels(x.id, d)]));
+      const r = await askTutor({ question: text, selected: s.selected, exposed: ctx.exposedIds, covering, removed: d.removed });
+      push([{ who: 'ai', text: r.answer, sources: local.sources }]);
+    } catch (e) { push([{ who: 'ai', text: `AI tutor unavailable (${(e as Error).message}). Grounded answer instead:\n\n${local.text}`, sources: local.sources }]); }
+    finally { setBusy(false); }
+  };
   const quick = ['What structure is beneath this muscle?', 'Explain the median nerve', 'Why is the radial nerve clinically important?', 'What is the blood supply of this muscle?', 'How do I identify the brachial artery?', 'Ask me five viva questions about the cubital fossa'];
   return (
     <div className="tutor">
+      <div className="plan-note">{s.plan === 'pro' && s.user ? <small className="ok-t">★ Pro: AI tutor active (grounded in the app's anatomy records).</small> : <small className="muted">Using the built-in grounded tutor. {cloudEnabled ? <><button className="link" onClick={() => s.patch({ modal: s.user ? 'account' : 'auth' })}>{s.user ? 'Upgrade to Pro' : 'Sign in'}</button> for the AI tutor.</> : 'AI tutor needs a configured deployment.'}</small>}</div>
       <div className="ctx"><small>Context: {s.selected ? STRUCTURE_BY_ID[s.selected]?.name : 'no selection'} · layers: {['skin', 'superficial_fascia', 'deep_fascia'].map((l) => `${l.replace('_', ' ')} ${D.layerStatus(d, l as never)}`).join(', ')}{s.lessonActive ? ` · step: ${LESSON.steps[s.lessonStep].title}` : ''}</small></div>
       <div className="chat" aria-live="polite">{log.map((m, i) => (<div key={i} className={`msg ${m.who}`}><pre>{m.text}</pre>{m.sources && m.sources.length > 0 && <small>Sources: {m.sources.join(' · ')}</small>}</div>))}<div ref={end} /></div>
-      <div className="quick">{quick.map((x) => <button key={x} className="chip" onClick={() => ask(x)}>{x}</button>)}</div>
-      <form onSubmit={(e) => { e.preventDefault(); ask(q); }}><input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Ask about a structure, region or step…" aria-label="Ask the tutor" /><button className="primary">Ask</button></form>
+      <div className="quick">{quick.map((x) => <button key={x} className="chip" onClick={() => void ask(x)}>{x}</button>)}</div>
+      <form onSubmit={(e) => { e.preventDefault(); void ask(q); }}><input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Ask about a structure, region or step…" aria-label="Ask the tutor" /><button className="primary" disabled={busy}>{busy ? '…' : 'Ask'}</button></form>
     </div>
   );
 }
