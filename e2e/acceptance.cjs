@@ -18,7 +18,7 @@ const OUT = process.argv[2] || 'e2e';
     await key(tool);
     const px = await p.evaluate(([layer, cutId]) => window.__av.guideScreen(layer, cutId), [layer, cutId]);
     if (!px) { console.log('no guide for', cutId); return; }
-    const trim = cutId.includes('skin.p') || cutId.includes('skin.d') ? 16 : layer !== 'skin' ? 3 : 0; const pts = px.slice(trim, px.length - trim);
+    const trim = cutId.includes('skin.p') || cutId.includes('skin.d') ? 6 : layer !== 'skin' ? 3 : 0; const pts = px.slice(trim, px.length - trim);
     await p.mouse.move(pts[0][0], pts[0][1]); await p.mouse.down();
     for (const q of pts) await p.mouse.move(q[0], q[1], { steps: 2 });
     await p.mouse.up(); await p.waitForTimeout(300);

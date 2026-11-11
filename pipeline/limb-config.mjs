@@ -67,7 +67,7 @@ export const SKIN_FMA = 7163;
 
 // Guided dissection window (fractions along limb; see limb-frame.U)
 export const WINDOW = { fTop: 0.14, fBot: 1.38 };
-export const HINGE_THETA_DEG = 105;
+export const HINGE_THETA_DEG = 85;
 export const REFLECT_ANGLE_DEG = 128;
 
 /**

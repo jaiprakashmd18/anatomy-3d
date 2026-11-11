@@ -34,3 +34,13 @@ export const cameraHooks = {
     const ctl = (window as unknown as { __controls?: { target: THREE.Vector3; update(): void } }).__controls; if (ctl) { ctl.target.set(...target); ctl.update(); } else c.lookAt(...target);
   },
 };
+
+export const hitHooks = {
+  /** Which structure/layer would a ray through these screen pixels hit first? (E2E debugging) */
+  hitAt(x: number, y: number) {
+    const m = registry.model; if (!m || !registry.camera || !registry.el) return null;
+    const r = registry.el.getBoundingClientRect(); const ray = new THREE.Raycaster(); ray.layers.set(0);
+    ray.setFromCamera(new THREE.Vector2(((x - r.left) / r.width) * 2 - 1, -((y - r.top) / r.height) * 2 + 1), registry.camera);
+    const h = ray.intersectObjects(m.all.filter((o) => o.visible), false)[0]; return h ? `${h.object.userData.structure}:${h.object.userData.group ?? ''}` : null;
+  },
+};
